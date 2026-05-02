@@ -1,0 +1,30 @@
+{
+  "name": "oasismadrid",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OasisMadrid — Navegador de Confort Térmico (MVP)",
+  "scripts": {
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev": "concurrently \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "build": "npm run build --prefix backend && npm run build --prefix frontend"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "node-cron": "^3.0.3",
+    "papaparse": "^5.4.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.9.0",
+    "@types/node-cron": "^3.0.11",
+    "@types/papaparse": "^5.3.15",
+    "concurrently": "^8.2.2",
+    "typescript": "^5.6.3"
+  }
+}
