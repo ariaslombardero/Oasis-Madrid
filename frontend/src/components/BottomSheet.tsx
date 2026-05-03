@@ -82,6 +82,8 @@ export function BottomSheet() {
   const removeWaypoint        = useStore((s) => s.removeWaypoint);
   const setWaypoint           = useStore((s) => s.setWaypoint);
 
+  const clearAllApp           = useStore((s) => s.clearAll);
+
   const [originText, setOriginText]     = useState('');
   const [destText, setDestText]         = useState('');
   const [waypointTexts, setWaypointTexts] = useState<string[]>([]);
@@ -90,6 +92,14 @@ export function BottomSheet() {
   const hasWaypoints = waypoints.length > 0;
   const getLabel = (idx: number) =>
     hasWaypoints ? String.fromCharCode(65 + idx) : undefined; // A, B, C…
+
+  const handleClear = () => {
+    clearAllApp();
+    setOriginText('');
+    setDestText('');
+    setWaypointTexts([]);
+    setError(null);
+  };
 
   const useGeolocation = () => {
     if (!navigator.geolocation) { setError(t.noGeolocation); return; }
@@ -102,8 +112,8 @@ export function BottomSheet() {
     );
   };
 
-  const pickOrigin = (s: GeocodeSuggestion) => setOrigin({ lat: s.lat, lng: s.lng, label: s.label });
-  const pickDest   = (s: GeocodeSuggestion) => setDestination({ lat: s.lat, lng: s.lng, label: s.label });
+  const pickOrigin = (s: GeocodeSuggestion) => { setOrigin({ lat: s.lat, lng: s.lng, label: s.label }); setOriginText(s.label); };
+  const pickDest   = (s: GeocodeSuggestion) => { setDestination({ lat: s.lat, lng: s.lng, label: s.label }); setDestText(s.label); };
   const pickWp = (idx: number) => (s: GeocodeSuggestion) => {
     setWaypoint(idx, { lat: s.lat, lng: s.lng, label: s.label });
   };
@@ -277,7 +287,16 @@ export function BottomSheet() {
       {route && (
         <>
           <div className="section-divider" />
-          <p className="sheet-section-title">{t.routeComparison}</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <p className="sheet-section-title" style={{ margin: 0 }}>{t.routeComparison}</p>
+            <button 
+              onClick={handleClear} 
+              style={{ background: 'none', border: 'none', color: 'var(--brand)', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', padding: '4px' }}
+              aria-label={t.clearRoute}
+            >
+              <X size={13} strokeWidth={2} /> {t.clearRoute}
+            </button>
+          </div>
           <div className="route-results">
 
             {/* Ruta fresca — primero */}

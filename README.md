@@ -48,11 +48,12 @@ La aplicación calcula qué rutas a pie ofrecen mayor cobertura de sombra arbór
 - 🌡️ **Mapa de confort térmico** — Visualización en tiempo real de la temperatura interpolada y el nivel de riesgo en cualquier punto de Madrid, actualizado cada 20 minutos con datos de las estaciones municipales.
 - 🗺️ **Planificador de rutas frescas** — Comparativa visual entre la ruta más rápida y la más fresca (mayor sombra, más fuentes, menor exposición térmica) con métricas de diferencia en grados, minutos y puntos de hidratación.
 - 🚶 **Paseo fresco circular** — Generación de rutas circulares por duración (sin destino fijo) que maximizan la sombra y la proximidad a fuentes. Punto de partida configurable por geolocalización o dirección manual.
+- 🧭 **Explorar Madrid** — Modo libre para explorar la ciudad activando/desactivando capas de zonas verdes, fuentes (beber y mascotas) y visualizando el ranking de barrios más frescos o calurosos en tiempo real.
 - 👤 **4 perfiles de usuario** — Transeúnte general, persona mayor, paseo con mascota y persona con movilidad reducida. Cada perfil ajusta los pesos del algoritmo de enrutamiento.
 - 💧 **Fuentes operativas filtradas** — Solo se muestran fuentes con estado EN SERVICIO (potables y para mascotas), sincronizadas diariamente con el portal municipal.
 - 🌳 **Índice de sombra arbórea** — Rejilla espacial construida a partir del inventario municipal de arbolado, consultada en tiempo real para cada tramo de la ruta.
-- 🔴 **Alertas térmicas** — Banners automáticos por umbral de temperatura local (preparado para integrar avisos oficiales de AEMET en futuras iteraciones).
-- 📊 **Contexto climático histórico** — Cada lectura muestra la desviación respecto a la media mensual climatológica 1991-2020 de AEMET.
+- 🔴 **Alertas térmicas** — Banners automáticos por umbral de temperatura local para advertir sobre condiciones de calor extremo.
+- 📊 **Contexto climático histórico** — Cada lectura muestra la desviación respecto a las normales climatológicas históricas de la ciudad.
 - ♿ **Accesibilidad WCAG 2.1 AA** — Diseñada siguiendo las pautas WCAG 2.1 nivel AA: modo de texto grande, modo de alto contraste, navegación por teclado.
 - 🎨 **UI/UX Refinada** — Visualización en paralelo de rutas coincidentes en el mapa, fondo con luminosidad adaptada y claridad en los mensajes comparativos de confort térmico.
 - 🌍 **Bilingüe** — Interfaz completa en castellano e inglés con cambio instantáneo.
@@ -133,7 +134,6 @@ oasismadrid/
 
 | Fuente | Uso |
 |---|---|
-| AEMET Open Data | Normales climatológicas 1991-2020 (contexto histórico) e infraestructura lista para alertas |
 | OpenRouteService | Motor de enrutamiento peatonal (hasta 3 alternativas) |
 | OpenStreetMap / Nominatim | Mapa base + geocodificación de direcciones |
 
@@ -180,7 +180,6 @@ La aplicación estará disponible en:
 | Variable | Para qué sirve | Cómo obtenerla |
 |----------|----------------|----------------|
 | `ORS_API_KEY` | Rutas peatonales reales (sin esto las rutas son línea recta) | [openrouteservice.org/dev](https://openrouteservice.org/dev/) — registro gratis (2.000 req/día) |
-| `AEMET_API_KEY` | Avisos oficiales de ola de calor (integración planificada para fase 3) | [opendata.aemet.es](https://opendata.aemet.es/centrodedescargas/inicio) — gratis |
 
 ---
 
@@ -229,7 +228,7 @@ Las contribuciones son bienvenidas. Si deseas proponer mejoras en el algoritmo d
 
 Este proyecto está bajo la Licencia **MIT**. Consulta el archivo [LICENSE](./LICENSE) incluido en el repositorio para más detalles.
 
-**Datos:** Ayuntamiento de Madrid (datos.madrid.es), AEMET, OpenStreetMap (ODbL).
+**Datos:** Ayuntamiento de Madrid (datos.madrid.es), OpenStreetMap (ODbL).
 **Mapa base:** MapLibre GL JS · OSM Tiles.
 
 ---

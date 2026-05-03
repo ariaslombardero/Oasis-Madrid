@@ -19,10 +19,15 @@ export function AddressInput({ placeholder, ariaLabel, value, onChange, onSelect
   const [activeIdx, setActiveIdx] = useState(-1);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const selectedRef = useRef<string>('');
 
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    if (value.length < MIN_CHARS) { setSuggestions([]); setOpen(false); return; }
+    if (value.length < MIN_CHARS || value === selectedRef.current) { 
+      setSuggestions([]); 
+      setOpen(false); 
+      return; 
+    }
 
     timerRef.current = setTimeout(async () => {
       try {
@@ -36,20 +41,28 @@ export function AddressInput({ placeholder, ariaLabel, value, onChange, onSelect
 
   // Close on outside click
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    const handler = (e: MouseEvent | TouchEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     };
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener('touchstart', handler, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('touchstart', handler);
+    };
   }, []);
 
   const pick = (s: GeocodeSuggestion) => {
+    selectedRef.current = s.label;
     onChange(s.label);
     onSelect(s);
     setSuggestions([]);
     setOpen(false);
+    // Blur the input so mobile keyboard closes
+    const input = wrapRef.current?.querySelector('input');
+    if (input) input.blur();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -87,7 +100,7 @@ export function AddressInput({ placeholder, ariaLabel, value, onChange, onSelect
               role="option"
               aria-selected={i === activeIdx}
               className={`suggestion-item ${i === activeIdx ? 'active' : ''}`}
-              onMouseDown={(e) => { e.preventDefault(); pick(s); }}
+              onClick={(e) => { e.preventDefault(); pick(s); }}
             >
               {s.label}
             </li>

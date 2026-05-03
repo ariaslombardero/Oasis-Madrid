@@ -184,7 +184,17 @@ export function WalkPanel() {
       {result && (
         <>
           <div className="section-divider" />
-          <p className="sheet-section-title">{t.walkResultTitle}</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <p className="sheet-section-title" style={{ margin: 0 }}>{t.walkResultTitle}</p>
+            <button 
+              onClick={() => { useStore.getState().clearAll(); setResult(null); setCustomText(''); }} 
+              style={{ background: 'none', border: 'none', color: 'var(--brand)', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', padding: '4px' }}
+              aria-label={t.clearRoute}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              {t.clearRoute}
+            </button>
+          </div>
           <div className="route-card fresh">
             <div className="header-row">
               <span className="badge">{duration} min</span>

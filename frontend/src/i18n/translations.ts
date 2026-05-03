@@ -31,6 +31,7 @@ const es = {
   onlyMin: 'Solo',
   minMore: 'min más.',
   sameTodayMsg: 'Ambas rutas tienen un confort térmico similar.',
+  clearRoute: 'Limpiar ruta',
   // layers
   mapLayers: 'Capas del mapa',
   drinkFountains: 'Fuentes de agua',
@@ -43,7 +44,7 @@ const es = {
   hotDayAvg: 'de media.',
   hotDayTip: 'Hidrátate, busca sombra y aprovecha las rutas frescas.',
   // footer
-  dataSource: 'Datos: Ayuntamiento de Madrid · OpenStreetMap · AEMET. Pulsa el mapa para ver el índice de confort térmico.',
+  dataSource: 'Datos: Ayuntamiento de Madrid · OpenStreetMap. Pulsa el mapa para ver el índice de confort térmico.',
   // thermal point
   selectedPoint: 'Punto seleccionado',
   riskLevels: {
@@ -150,6 +151,7 @@ const en: typeof es = {
   onlyMin: 'Only',
   minMore: 'min longer.',
   sameTodayMsg: 'Both routes have similar thermal comfort.',
+  clearRoute: 'Clear route',
   mapLayers: 'Map layers',
   drinkFountains: 'Drinking fountains',
   petFountains: 'Pet fountains',
@@ -159,7 +161,7 @@ const en: typeof es = {
   hotDayIn: 'Hot day in Madrid',
   hotDayAvg: 'average.',
   hotDayTip: 'Stay hydrated, seek shade and use cool routes.',
-  dataSource: 'Data: Madrid City Council · OpenStreetMap · AEMET. Tap the map to check the thermal comfort index.',
+  dataSource: 'Data: Madrid City Council · OpenStreetMap. Tap the map to check the thermal comfort index.',
   selectedPoint: 'Selected point',
   riskLevels: {
     comfort: 'Thermal comfort',

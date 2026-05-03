@@ -46,6 +46,7 @@ interface AppState {
   setWaypoint: (idx: number, wp: Waypoint) => void;
   toggleA11y: (l: 'largeText' | 'highContrast' | 'darkMode') => void;
   setLoadingRoute: (b: boolean) => void;
+  clearAll: () => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -104,4 +105,5 @@ export const useStore = create<AppState>((set) => ({
       ...(l === 'darkMode'     ? { darkMode:     !s.darkMode     } : {}),
     })),
   setLoadingRoute: (b) => set({ loadingRoute: b }),
+  clearAll: () => set({ origin: null, destination: null, route: null, waypoints: [] }),
 }));
