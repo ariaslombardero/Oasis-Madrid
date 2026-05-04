@@ -1,4 +1,4 @@
-# 🌳 OasisMadrid — Navegador de confort térmico y rutas saludables
+# 🌳 OasisMadrid-Navegador de confort térmico y rutas saludables para la ciudad de Madrid
 
 <div align="center">
 
@@ -9,7 +9,7 @@
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=for-the-badge&logo=vite)
 ![Estado](https://img.shields.io/badge/Estado-Activo-success?style=for-the-badge)
 
-**Aplicación web que combina 6 conjuntos de datos abiertos del Ayuntamiento de Madrid y 3 fuentes externas para generar rutas peatonales más frescas y saludables, y mostrar el riesgo térmico por zona en tiempo real.**
+**Aplicación web que combina 7 conjuntos de datos abiertos del Ayuntamiento de Madrid y 2 fuentes externas para generar rutas peatonales más frescas y saludables, y mostrar el riesgo térmico por zona en tiempo real.**
 
 <br/>
 
@@ -228,18 +228,17 @@ Las contribuciones son bienvenidas. Si deseas proponer mejoras en el algoritmo d
 
 ## 📜 Licencia
 
-Este proyecto está bajo la Licencia **MIT**. Consulta el archivo [LICENSE](./LICENSE) incluido en el repositorio para más detalles.
-
-**Datos:** Ayuntamiento de Madrid (datos.madrid.es), OpenStreetMap (ODbL).
-**Mapa base:** MapLibre GL JS · OSM Tiles.
-
+Este proyecto está bajo la Licencia **Apache 2.0**. Consulta el archivo [LICENSE](./LICENSE) incluido en el repositorio para más detalles sobre los términos de uso, patentes y responsabilidad.
+**Atribución de datos:**
+- **Datos municipales:** Ayuntamiento de Madrid ([datos.madrid.es](https://datos.madrid.es)).
+- **Cartografía:** [OpenStreetMap](https://www.openstreetmap.org/copyright) (© Colaboradores de OpenStreetMap) bajo licencia ODbL.
+- **Meteorología:** [Open-Meteo](https://open-meteo.com/) (CC BY 4.0).
+- **Mapa base:** MapLibre GL JS.
 ---
 
 ## 👨‍💻 Autor
 
 **Jose Antonio Arias Lombardero**
 *Experto en Inteligencia Artificial aplicada al sector público, innovación, contratación y fondos europeos.*
-
-Esta aplicación forma parte de un portfolio de soluciones tecnológicas conceptualizadas, desarrolladas y desplegadas en entornos cloud para su aplicación en el sector público. Mi objetivo es demostrar cómo el uso estratégico de modelos avanzados de IA (Desarrollo Asistido por Inteligencia Artificial Avanzada - Agentic AI) puede escalar radicalmente la digitalización, la operatividad y la alfabetización tecnológica de la Administración.
 
 🔗 [Consulta mi portfolio completo de aplicaciones y trayectoria profesional](https://ariaslombardero.es/)
