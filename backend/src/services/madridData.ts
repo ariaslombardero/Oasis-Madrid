@@ -12,7 +12,7 @@ const URLS = {
   weatherStations: `${BASE}/300360-0-meteorologicos-estaciones.csv`,
   drinkFountains: `${BASE}/300051-0-fuentes.json`,
   petFountains: `${BASE}/50055-0-fuentes-mascotas.json`,
-  greenSpaces: `${BASE}/200059-0-zonas-verdes.csv`,
+  greenSpaces: `${BASE}/300153-0-zonas-verdes-inventario.csv`,
   airQualityRealtimeJson: 'https://ciudadesabiertas.madrid.es/dynamicAPI/API/query/calair_tiemporeal_ult?pageSize=10000',
   airQualityRealtimeApi: 'https://datos.madrid.es/dataset/212531-0-calidad-aire-tiempo-real/resource/212531-3-calidad-aire-tiempo-real-api/download/212531-3-calidad-aire-tiempo-real-api.api',
 };
