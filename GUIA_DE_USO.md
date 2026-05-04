@@ -120,7 +120,7 @@ Repite la prueba 6 cambiando el perfil:
 - **🚶 General**: ruta equilibrada.
 - **👴 Mayor**: prioriza sombra y fuentes muy cercanas.
 - **🐕 Mascota**: añade fuentes para mascotas al cómputo.
-- **♿ PMR**: penaliza pendientes.
+- **♿ PMR**: utiliza el motor específico para sillas de ruedas de OpenRouteService, evitando automáticamente tramos con pendientes excesivas o pavimentos no adecuados.
 
 **Qué demuestra:** que los pesos por perfil cambian el cálculo del
 "coste fresco" y por tanto la ruta recomendada.
