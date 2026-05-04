@@ -51,8 +51,8 @@ La aplicación calcula qué rutas a pie ofrecen mayor cobertura de sombra arbór
 - 🚶 **Paseo fresco circular** — Generación de rutas circulares por duración (sin destino fijo) que maximizan la sombra y la proximidad a fuentes. Punto de partida configurable por geolocalización o dirección manual.
 - 🌍 **Explorar Madrid** — Modo libre para explorar la ciudad activando/desactivando capas de zonas verdes, fuentes y visualizando el ranking de barrios más frescos o calurosos en tiempo real.
 - 👤 **4 perfiles de usuario** — Transeúnte general, persona mayor, paseo con mascota y persona con movilidad reducida.
-- 💧 **Fuentes operativas filtradas** — Solo se muestran fuentes con estado EN SERVICIO (potables y para mascotas), sincronizadas diariamente.
-- 🌳 **Índice de sombra arbórea** — Rejilla espacial construida a partir del inventario municipal de arbolado, consultada en tiempo real.
+- 💧 **Fuentes operativas filtradas** — Solo se muestran fuentes con estado EN SERVICIO (potables y para mascotas).
+- 🌳 **Índice de sombra arbórea** — Rejilla espacial construida a partir del inventario municipal de arbolado.
 - 🔴 **Alertas térmicas** — Banners automáticos por umbral de temperatura local para advertir sobre condiciones de calor extremo.
 - 📊 **Contexto climático histórico** — Cada lectura muestra la desviación respecto a las normales climatológicas históricas de la ciudad.
 - ♿ **Accesibilidad WCAG 2.1 AA** — Diseñada siguiendo las pautas WCAG 2.1 nivel AA: modo de texto grande, alto contraste, navegación por teclado.
@@ -122,15 +122,15 @@ oasismadrid/
 
 ### Datos del portal datos.madrid.es (7 conjuntos)
 
-| # | Dataset | Frecuencia | Función |
-|---|---------|-----------|--------|
-| DS-01 | Datos meteorológicos en tiempo real | 20 min | Mapa de confort térmico |
-| DS-02 | Estaciones meteorológicas (coordenadas) | Estática | Interpolación espacial IDW |
-| DS-03 | Arbolado en parques y zonas verdes | Semestral | Índice de sombra urbana |
-| DS-04 | Fuentes de agua para beber | Diaria | Puntos de hidratación (perfil general) |
-| DS-05 | Fuentes de agua para mascotas | Diaria | Hidratación dual (perfil mascota) |
-| DS-06 | Inventario de zonas verdes | Anual | Capa de parques + proxy de sombra |
-| DS-07 | Calidad del aire en tiempo real | 1 hora | Índice de Calidad del Aire (ICA) |
+| # | Dataset | Función |
+|---|---------|-----------------|
+| DS-01 | Datos meteorológicos en tiempo real | Mapa de confort térmico |
+| DS-02 | Estaciones meteorológicas (coordenadas) | Interpolación espacial IDW |
+| DS-03 | Arbolado en parques y zonas verdes | Índice de sombra urbana |
+| DS-04 | Fuentes de agua para beber | Puntos de hidratación (perfil general) |
+| DS-05 | Fuentes de agua para mascotas | Hidratación dual (perfil mascota) |
+| DS-06 | Inventario de zonas verdes | Capa de parques + proxy de sombra |
+| DS-07 | Calidad del aire en tiempo real | Índice de Calidad del Aire (ICA) |
 
 ### Fuentes externas
 
@@ -175,9 +175,9 @@ La aplicación estará disponible en:
 - Backend → **http://localhost:3001**
 - Health check → **http://localhost:3001/api/v1/health**
 
-> El backend intenta descargar datos reales de **datos.madrid.es** al arrancar. Si el portal no responde, cae a un dataset de respaldo con datos municipales reales abreviados para que la demo siga funcionando.
+> El backend intenta descargar datos reales de **datos.madrid.es** al arrancar. Si el portal no responde, tomas los datos del dataset de respaldo con los datos municipales publicados en el portal a 1 de mayo de 2026 para que la demo siga funcionando.
 
-### Claves opcionales (recomendadas)
+### Claves utilizadas en el despliegue de la app en Vercel (con variables de entorno)
 
 | Variable | Para qué sirve | Cómo obtenerla |
 |----------|----------------|----------------|
