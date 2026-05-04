@@ -9,7 +9,7 @@
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=for-the-badge&logo=vite)
 ![Estado](https://img.shields.io/badge/Estado-Activo-success?style=for-the-badge)
 
-**Aplicación web que combina 7 conjuntos de datos abiertos del Ayuntamiento de Madrid y 2 fuentes externas para generar rutas peatonales más frescas y saludables, y mostrar el riesgo térmico por zona en tiempo real.**
+**Aplicación web que combina 7 conjuntos de datos abiertos del Ayuntamiento de Madrid y 3 fuentes externas para generar rutas peatonales más frescas y saludables, y mostrar el riesgo térmico por zona en tiempo real.**
 
 <br/>
 
@@ -136,6 +136,7 @@ oasismadrid/
 
 | Fuente | Uso |
 |---|---|
+| AEMET Open Data | Integración técnica para la monitorización de alertas extremas que puedan afectar a la seguridad de las rutas peatonales (calor extremo, tormentas) |
 | OpenRouteService | Motor de enrutamiento peatonal (hasta 3 alternativas) |
 | OpenStreetMap / Nominatim | Mapa base + geocodificación de direcciones |
 
