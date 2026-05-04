@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import maplibregl, { Map, Marker, Popup } from 'maplibre-gl';
 import { useStore } from '../store/appStore';
-import { api } from '../services/api';
+import { api, reverseGeocode } from '../services/api';
 
 // Estilo MapLibre con tiles raster gratuitos de OSM (sin API key necesaria).
 const STYLE: any = {
   version: 8,
+  glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
   sources: {
     osm: {
       type: 'raster',
@@ -34,7 +35,6 @@ function colorForRisk(level: string | null) {
 export function MapView() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
-  const fountainMarkersRef = useRef<Marker[]>([]);
   const odMarkersRef = useRef<Marker[]>([]);
   const [mapReady, setMapReady] = useState(false);
 
@@ -120,7 +120,12 @@ export function MapView() {
         type: 'circle',
         source: 'green-spaces',
         paint: {
-          'circle-radius': ['interpolate', ['linear'], ['get', 'sizeM'], 50000, 12, 1000000, 60, 17000000, 140],
+          'circle-radius': [
+            'interpolate', ['linear'], ['zoom'],
+            10, 8,
+            14, 25,
+            20, 80
+          ],
           'circle-color': '#4CAF50',
           'circle-opacity': 0.25,
           'circle-stroke-color': '#2E7D32',
@@ -160,16 +165,128 @@ export function MapView() {
         paint: { 'line-color': '#1A7F64', 'line-width': 6, 'line-opacity': 0.95, 'line-offset': -3 },
       });
 
+      // Fuentes clusters
+      map.addSource('fountains', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+        cluster: true,
+        clusterMaxZoom: 14,
+        clusterRadius: 50
+      });
+      map.addLayer({
+        id: 'fountains-clusters',
+        type: 'circle',
+        source: 'fountains',
+        filter: ['has', 'point_count'],
+        paint: {
+          'circle-color': '#1565C0',
+          'circle-radius': ['step', ['get', 'point_count'], 12, 10, 16, 50, 20],
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#fff'
+        }
+      });
+      map.addLayer({
+        id: 'fountains-cluster-count',
+        type: 'symbol',
+        source: 'fountains',
+        filter: ['has', 'point_count'],
+        layout: {
+          'text-field': '{point_count_abbreviated}',
+          'text-font': ['Open Sans Bold'],
+          'text-size': 12
+        },
+        paint: {
+          'text-color': '#ffffff'
+        }
+      });
+      map.addLayer({
+        id: 'fountains-unclustered',
+        type: 'circle',
+        source: 'fountains',
+        filter: ['!', ['has', 'point_count']],
+        paint: {
+          'circle-color': ['match', ['get', 'type'], 'pet', '#FFC107', '#1565C0'],
+          'circle-radius': 8,
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#fff',
+          'circle-opacity': ['match', ['get', 'status'], 'EN_SERVICIO', 1, 0.45]
+        }
+      });
+      const drawEmoji = (emoji: string) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 24;
+        canvas.height = 24;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.font = '14px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(emoji, 12, 13);
+          return ctx.getImageData(0, 0, 24, 24);
+        }
+        return { width: 24, height: 24, data: new Uint8Array(24 * 24 * 4) };
+      };
+
+      if (!map.hasImage('emoji-drink')) map.addImage('emoji-drink', drawEmoji('💧'));
+      if (!map.hasImage('emoji-pet')) map.addImage('emoji-pet', drawEmoji('🐾'));
+
+      map.addLayer({
+        id: 'fountains-unclustered-icon',
+        type: 'symbol',
+        source: 'fountains',
+        filter: ['!', ['has', 'point_count']],
+        layout: {
+          'icon-image': ['match', ['get', 'type'], 'pet', 'emoji-pet', 'emoji-drink'],
+          'icon-size': 0.75,
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true
+        }
+      });
+      
+      // Popup events
+      map.on('click', 'fountains-unclustered', (e) => {
+        const f = e.features?.[0];
+        if (!f) return;
+        const coords = (f.geometry as any).coordinates;
+        const props = f.properties;
+        const typeLabel = props.type === 'pet' ? 'Fuente para mascotas' : 'Fuente de agua';
+        const statusLabel = props.status === 'EN_SERVICIO' ? 'en servicio' : 'fuera de servicio';
+        new maplibregl.Popup({ closeButton: true, offset: 12 })
+          .setLngLat(coords)
+          .setHTML(
+            `<strong>${props.name ?? typeLabel}</strong><br/>
+            ${typeLabel}<br/>
+            Estado: ${statusLabel}<br/>${props.district ?? ''}`
+          )
+          .addTo(map);
+      });
+      map.on('mouseenter', 'fountains-unclustered', () => { map.getCanvas().style.cursor = 'pointer'; });
+      map.on('mouseleave', 'fountains-unclustered', () => { map.getCanvas().style.cursor = ''; });
+
+      map.on('click', 'fountains-clusters', async (e) => {
+        const features = map.queryRenderedFeatures(e.point, { layers: ['fountains-clusters'] });
+        const clusterId = features[0].properties.cluster_id;
+        const source = map.getSource('fountains') as maplibregl.GeoJSONSource;
+        try {
+          const zoom = await source.getClusterExpansionZoom(clusterId);
+          map.easeTo({
+            center: (features[0].geometry as any).coordinates as [number, number],
+            zoom: zoom
+          });
+        } catch (err) {
+          // Ignore
+        }
+      });
+      map.on('mouseenter', 'fountains-clusters', () => { map.getCanvas().style.cursor = 'pointer'; });
+      map.on('mouseleave', 'fountains-clusters', () => { map.getCanvas().style.cursor = ''; });
+
       // Click en mapa → ICT del punto
       map.on('click', async (e) => {
         try {
           const t = await api.thermalPoint(e.lngLat.lat, e.lngLat.lng);
+          const address = await reverseGeocode(e.lngLat.lat, e.lngLat.lng);
+          if (address) t.address = address;
           setPointThermal(t);
-          useStore.getState().setOrigin({ 
-            lat: e.lngLat.lat, 
-            lng: e.lngLat.lng, 
-            label: `Punto seleccionado (${t.temperatureC.toFixed(1)}°C)` 
-          });
         } catch { /* ignore */ }
       });
       setMapReady(true);
@@ -198,6 +315,7 @@ export function MapView() {
           hum: s.humidityPct,
           ict: s.ict,
           risk: s.riskLevel,
+          aqi: s.aqi,
         },
       }));
     const src = map.getSource('thermal-circles') as maplibregl.GeoJSONSource | undefined;
@@ -215,8 +333,11 @@ export function MapView() {
         .setLngLat(f.geometry.coordinates)
         .setHTML(
           `<strong>${f.properties.name}</strong><br/>
-          Temp: ${f.properties.temp}°C · Humedad: ${f.properties.hum}%<br/>
-          ICT: ${f.properties.ict ?? '—'} · Riesgo: ${f.properties.risk ?? '—'}`,
+          <div style="font-size: 13px; line-height: 1.4;">
+            Temp: ${f.properties.temp !== undefined && f.properties.temp !== 'undefined' ? `${f.properties.temp}°C` : '—'} · Humedad: ${f.properties.hum !== undefined && f.properties.hum !== 'undefined' ? `${f.properties.hum}%` : '—'}<br/>
+            ICT: ${f.properties.ict !== undefined && f.properties.ict !== 'undefined' ? f.properties.ict : '—'} · Riesgo: ${f.properties.risk && f.properties.risk !== 'undefined' ? f.properties.risk : '—'}<br/>
+            ICA: <strong>${f.properties.aqi !== undefined && f.properties.aqi !== 'undefined' ? f.properties.aqi : '—'}</strong> (1=Mejor, 5=Peor)
+          </div>`
         )
         .addTo(map);
     };
@@ -234,11 +355,15 @@ export function MapView() {
     const map = mapRef.current;
     if (!map || !mapReady) return;
     const features = showGreen
-      ? greenSpaces.map((g) => ({
-          type: 'Feature' as const,
-          geometry: { type: 'Point' as const, coordinates: [g.centroid.lng, g.centroid.lat] },
-          properties: { name: g.name, sizeM: g.area_m2 ?? 50000 },
-        }))
+      ? greenSpaces.map((g) => {
+          const area = g.area_m2 ?? 50000;
+          const radiusM = Math.sqrt(area / Math.PI);
+          return {
+            type: 'Feature' as const,
+            geometry: { type: 'Point' as const, coordinates: [g.centroid.lng, g.centroid.lat] },
+            properties: { name: g.name, radiusM },
+          };
+        })
       : [];
     const src = map.getSource('green-spaces') as maplibregl.GeoJSONSource | undefined;
     src?.setData({ type: 'FeatureCollection', features });
@@ -280,46 +405,48 @@ export function MapView() {
     src.setData({ type: 'FeatureCollection', features });
   }, [greenSpaces, showTree, mapReady]);
 
-  // Marcadores fuentes
+  // Fuentes a la fuente GeoJSON 'fountains'
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
-    fountainMarkersRef.current.forEach((m) => m.remove());
-    fountainMarkersRef.current = [];
-    const filtered = fountains.filter((f) => (f.type === 'drink' && showDrink) || (f.type === 'pet' && showPet));
-    for (const f of filtered) {
-      const el = document.createElement('div');
-      const operative = f.status === 'EN_SERVICIO';
-      const bgColor = f.type === 'pet' ? '#388E3C' : (operative ? '#1565C0' : '#757575');
-      el.style.cssText = `
-        width: 32px; height: 32px; border-radius: 50%;
-        background: ${bgColor};
-        border: 3px solid white;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.55), 0 0 0 1.5px ${bgColor};
-        cursor: pointer;
-        opacity: ${operative ? 1 : 0.45};
-        display: flex; align-items: center; justify-content: center;
-        font-size: 15px; line-height: 1;
-      `;
-      el.textContent = f.type === 'pet' ? '🐾' : '💧';
-      const typeLabel = f.type === 'pet' ? 'Fuente para mascotas' : 'Fuente de agua';
-      const statusLabel = operative ? 'en servicio' : 'fuera de servicio';
-      el.title = `${f.name ?? typeLabel} — ${statusLabel}`;
-      el.setAttribute('role', 'button');
-      el.setAttribute('tabindex', '0');
-      el.setAttribute('aria-label', `${f.name ?? typeLabel}, ${statusLabel}${f.district ? `, ${f.district}` : ''}`);
-      const popup = new Popup({ offset: 12 }).setHTML(
-        `<strong>${f.name ?? typeLabel}</strong><br/>
-        ${typeLabel}<br/>
-        Estado: ${statusLabel}<br/>${f.district ?? ''}`,
-      );
-      const marker = new Marker({ element: el }).setLngLat([f.lng, f.lat]).setPopup(popup).addTo(map);
-      el.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); marker.togglePopup(); }
-      });
-      fountainMarkersRef.current.push(marker);
-    }
-  }, [fountains, showDrink, showPet]);
+    if (!map || !mapReady) return;
+    const src = map.getSource('fountains') as maplibregl.GeoJSONSource | undefined;
+    if (!src) return;
+    
+    // Sort so drink fountains are processed first, pet fountains second.
+    // That way, if they overlap, the pet fountain gets the offset.
+    const filtered = fountains
+      .filter((f) => (f.type === 'drink' && showDrink) || (f.type === 'pet' && showPet))
+      .sort((a, b) => a.type === 'drink' ? -1 : 1);
+
+    const seenCoords = new Set<string>();
+    
+    const features = filtered.map(f => {
+      let lng = f.lng;
+      let lat = f.lat;
+      const coordKey = `${lng.toFixed(5)},${lat.toFixed(5)}`;
+      
+      if (seenCoords.has(coordKey)) {
+        // Offset slightly to avoid exact overlap (approx 4 meters)
+        // This prevents the droplet and paw emojis from blending together visually.
+        lng += 0.00004;
+        lat -= 0.00004;
+      }
+      seenCoords.add(coordKey);
+
+      return {
+        type: 'Feature' as const,
+        geometry: { type: 'Point' as const, coordinates: [lng, lat] },
+        properties: { 
+          id: f.id, 
+          name: f.name, 
+          type: f.type, 
+          status: f.status, 
+          district: f.district 
+        }
+      };
+    });
+    src.setData({ type: 'FeatureCollection', features });
+  }, [fountains, showDrink, showPet, mapReady]);
 
   // Origen / destino
   useEffect(() => {

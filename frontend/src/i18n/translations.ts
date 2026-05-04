@@ -106,7 +106,7 @@ const es = {
   helpBtn: 'Ayuda',
   helpTitle: 'Cómo usar OasisMadrid',
   helpSteps: [
-    { icon: '🗺️', title: 'Explora el mapa', desc: 'Pulsa en cualquier punto de Madrid para ver el índice de confort térmico en tiempo real.' },
+    { icon: '🗺️', title: 'Explora el mapa', desc: 'Pulsa en cualquier punto de Madrid para ver el índice de confort térmico y la calidad del aire en tiempo real.' },
     { icon: '📍', title: 'Planifica tu ruta', desc: 'Escribe origen y destino. Te calculamos la ruta más fresca y la comparamos con la ruta rápida.' },
     { icon: '👤', title: 'Elige tu perfil', desc: 'General, Adulto mayor, Con mascota o Accesible. Cada perfil ajusta los criterios de la ruta.' },
     { icon: '🚶', title: 'Paseo circular', desc: 'Sin destino fijo, elige cuántos minutos quieres caminar y te sugerimos una ruta fresca circular.' },
@@ -212,7 +212,7 @@ const en: typeof es = {
   helpBtn: 'Help',
   helpTitle: 'How to use OasisMadrid',
   helpSteps: [
-    { icon: '🗺️', title: 'Explore the map', desc: 'Tap any point in Madrid to see the real-time thermal comfort index.' },
+    { icon: '🗺️', title: 'Explore the map', desc: 'Tap any point in Madrid to see the real-time thermal comfort index and air quality.' },
     { icon: '📍', title: 'Plan your route', desc: 'Enter origin and destination. We calculate the coolest route and compare it to the fastest.' },
     { icon: '👤', title: 'Choose your profile', desc: 'General, Elderly, Pet walk or Accessible. Each profile adjusts the route criteria.' },
     { icon: '🚶', title: 'Circular walk', desc: 'No fixed destination — choose how many minutes you want to walk and get a cool circular route.' },

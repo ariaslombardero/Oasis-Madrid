@@ -4,17 +4,24 @@ import { fallbackStations, fallbackReadings, fallbackFountains, fallbackPetFount
 import { loadTreeIndex, getTreeCount } from './treeIndex.js';
 
 const BASE = process.env.MADRID_DATA_BASE_URL || 'https://datos.madrid.es/egob/catalogo';
+const DATA_DIR = './src/data';
 
-// URLs oficiales de datos.madrid.es (DS-01..DS-06).
-// Nota: el portal puede cambiar el formato/ID concreto del CSV mensual de
-// meteorología; mantenemos la URL canónica del catálogo como referencia y
-// caemos a datos de respaldo si la descarga falla.
 const URLS = {
-  weatherRealtime: `${BASE}/300392-0-meteorologia-tiempo-real.json`,
+  weatherRealtimeJson: 'https://ciudadesabiertas.madrid.es/dynamicAPI/API/query/meteo_tiemporeal_ult?pageSize=10000',
+  weatherRealtimeApi: 'https://datos.madrid.es/dataset/300392-0-meteorologia-tiempo-real/resource/300392-0-meteorologia-tiempo-real-api/download/300392-0-meteorologia-tiempo-real-api.api',
   weatherStations: `${BASE}/300360-0-meteorologicos-estaciones.csv`,
   drinkFountains: `${BASE}/300051-0-fuentes.json`,
   petFountains: `${BASE}/50055-0-fuentes-mascotas.json`,
   greenSpaces: `${BASE}/200059-0-zonas-verdes.csv`,
+  airQualityRealtimeJson: 'https://ciudadesabiertas.madrid.es/dynamicAPI/API/query/calair_tiemporeal_ult?pageSize=10000',
+  airQualityRealtimeApi: 'https://datos.madrid.es/dataset/212531-0-calidad-aire-tiempo-real/resource/212531-3-calidad-aire-tiempo-real-api/download/212531-3-calidad-aire-tiempo-real-api.api',
+};
+
+const LOCAL_FILES = {
+  weatherStations: `${DATA_DIR}/300360-1-estaciones de control.csv`,
+  drinkFountains: `${DATA_DIR}/fuentes_beber.json`,
+  petFountains: `${DATA_DIR}/areas_caninas.json`,
+  greenSpaces: `${DATA_DIR}/masas_distritos.csv`,
 };
 
 export interface WeatherStation {
@@ -32,6 +39,18 @@ export interface WeatherReading {
   humidityPct: number | null;
   windSpeedMs: number | null;
   solarRadiationWm2: number | null;
+}
+
+export interface AirQualityReading {
+  stationId: string;
+  measuredAt: string;
+  so2: number | null;
+  co: number | null;
+  no: number | null;
+  no2: number | null;
+  pm25: number | null;
+  pm10: number | null;
+  o3: number | null;
 }
 
 export interface Fountain {
@@ -65,6 +84,7 @@ export interface AemetAlert {
 interface Cache {
   stations: WeatherStation[];
   readings: WeatherReading[];
+  airQuality: AirQualityReading[];
   fountains: Fountain[];
   greenSpaces: GreenSpace[];
   alerts: AemetAlert[];
@@ -74,6 +94,7 @@ interface Cache {
 const cache: Cache = {
   stations: [],
   readings: [],
+  airQuality: [],
   fountains: [],
   greenSpaces: [],
   alerts: [],
@@ -85,8 +106,18 @@ function markFreshness(key: string, source: 'live' | 'fallback') {
 }
 
 function safeNum(v: unknown): number | null {
-  const n = typeof v === 'number' ? v : Number(String(v ?? '').replace(',', '.'));
+  if (v === undefined || v === null || v === '') return null;
+  const n = typeof v === 'number' ? v : Number(String(v).replace(',', '.'));
   return Number.isFinite(n) ? n : null;
+}
+
+async function readLocalFile(path: string): Promise<string | null> {
+  try {
+    const fs = await import('fs/promises');
+    return await fs.readFile(path, 'utf-8');
+  } catch (err) {
+    return null;
+  }
 }
 
 async function fetchText(url: string, timeout = 15000): Promise<string> {
@@ -102,42 +133,44 @@ async function fetchJson<T = any>(url: string, timeout = 15000): Promise<T> {
 // =============== ESTACIONES METEOROLÓGICAS (DS-02) ===============
 async function loadStations(): Promise<WeatherStation[]> {
   try {
-    const text = await fetchText(URLS.weatherStations);
+    const text = await readLocalFile(LOCAL_FILES.weatherStations);
+    if (!text) {
+      throw new Error(`Local stations file not found: ${LOCAL_FILES.weatherStations}`);
+    }
+
     const parsed = Papa.parse<Record<string, string>>(text, {
       header: true,
       delimiter: ';',
       skipEmptyLines: true,
     });
+    
     const rows = parsed.data;
     const stations: WeatherStation[] = [];
     for (const row of rows) {
-      // Heurística: las columnas exactas pueden variar — buscamos las claves
-      // típicas del portal del Ayuntamiento.
-      const keys = Object.keys(row);
-      const codigoKey = keys.find((k) => /codigo/i.test(k) && /esta/i.test(k)) || keys.find((k) => /codigo/i.test(k));
-      const nombreKey = keys.find((k) => /estaci[oó]n/i.test(k) && !/codigo/i.test(k)) || keys.find((k) => /nombre/i.test(k));
-      const latKey = keys.find((k) => /^lat/i.test(k) || /latitud/i.test(k));
-      const lngKey = keys.find((k) => /^lon/i.test(k) || /longitud/i.test(k));
-      const distritoKey = keys.find((k) => /distrito/i.test(k));
-      if (!codigoKey || !latKey || !lngKey) continue;
-      const lat = safeNum(row[latKey]);
-      const lng = safeNum(row[lngKey]);
-      if (lat === null || lng === null) continue;
-      stations.push({
-        id: String(row[codigoKey]).trim(),
-        name: nombreKey ? String(row[nombreKey]).trim() : `Estación ${row[codigoKey]}`,
-        district: distritoKey ? String(row[distritoKey]).trim() : undefined,
-        lat,
-        lng,
-      });
+      const lat = safeNum(row['LATITUD']);
+      const lng = safeNum(row['LONGITUD']);
+      const id = row['CÓDIGO'] || row['codigo'] || row['CODIGO'];
+      const name = row['ESTACION'] || row['estacion'] || row['nombre'];
+
+      if (id && lat !== null && lng !== null) {
+        stations.push({
+          id: String(id).trim(),
+          name: String(name || id).trim(),
+          district: row['DISTRITO'] || row['distrito'],
+          lat,
+          lng,
+        });
+      }
     }
+
     if (stations.length === 0) throw new Error('No stations parsed');
     markFreshness('stations', 'live');
+    console.log(`[madridData] Loaded ${stations.length} stations from local file`);
     return stations;
   } catch (err) {
-    console.warn('[madridData] stations fallback:', (err as Error).message);
+    console.error('[madridData] Failed to load local stations:', (err as Error).message);
     markFreshness('stations', 'fallback');
-    return fallbackStations;
+    return [];
   }
 }
 
@@ -155,13 +188,7 @@ const MAG_HUM = '86';
 const MAG_WIND = '81';
 const MAG_RAD = '88';
 
-function parseRealtimeCsv(text: string): WeatherReading[] {
-  const parsed = Papa.parse<Record<string, string>>(text, {
-    header: true,
-    delimiter: ';',
-    skipEmptyLines: true,
-  });
-  const rows = parsed.data;
+function parseRealtimeWeatherData(rows: any[]): WeatherReading[] {
   const latestByStationMag = new Map<string, { hour: number; value: number; ano: number; mes: number; dia: number }>();
   for (const row of rows) {
     const estacion = (row['ESTACION'] || row['PUNTO_MUESTREO'] || '').toString().padStart(3, '0');
@@ -190,7 +217,8 @@ function parseRealtimeCsv(text: string): WeatherReading[] {
   }
   const byStation = new Map<string, WeatherReading>();
   for (const [key, info] of latestByStationMag.entries()) {
-    const [stationId, mag] = key.split('_');
+    const [stationIdBase, mag] = key.split('_');
+    const stationId = stationIdBase.length === 3 ? `28079${stationIdBase}` : stationIdBase;
     const ts = new Date(Date.UTC(info.ano, info.mes - 1, info.dia, info.hour - 1, 0, 0)).toISOString();
     let r = byStation.get(stationId);
     if (!r) {
@@ -242,22 +270,19 @@ async function loadFromOpenMeteo(stations: WeatherStation[]): Promise<WeatherRea
 }
 
 async function loadWeatherReadings(stations: WeatherStation[]): Promise<WeatherReading[]> {
-  // --- Intento 1: datos.madrid.es (fuente oficial DS-01) ---
-  const candidateUrls = [
-    URLS.weatherRealtime,
-    `${BASE}/300392-0-meteorologia-tiempo-real.csv`,
-    `${BASE}/300392-10306617-meteorologia-tiempo-real.csv`,
-  ];
+  // --- Intento 1: datos.madrid.es (fuente oficial DS-01 vía JSON) ---
+  const candidateUrls = [URLS.weatherRealtimeJson, URLS.weatherRealtimeApi];
   for (const url of candidateUrls) {
     try {
-      const text = await fetchText(url);
-      const trimmed = text.trim();
-      if (trimmed.startsWith('{') || trimmed.startsWith('[')) continue;
-      const readings = parseRealtimeCsv(text);
-      if (readings.length > 0) {
-        console.log(`[madridData] weather live from datos.madrid.es (${readings.length} stations)`);
-        markFreshness('readings', 'live');
-        return readings;
+      const data = await fetchJson(url);
+      const rows = data?.records || data?.data || data;
+      if (Array.isArray(rows) && rows.length > 0) {
+        const readings = parseRealtimeWeatherData(rows);
+        if (readings.length > 0) {
+          console.log(`[madridData] weather live from datos.madrid.es (${readings.length} stations)`);
+          markFreshness('readings', 'live');
+          return readings;
+        }
       }
     } catch (_) { /* probar siguiente */ }
   }
@@ -278,25 +303,110 @@ async function loadWeatherReadings(stations: WeatherStation[]): Promise<WeatherR
   return fallbackReadings;
 }
 
+// =============== CALIDAD DEL AIRE EN TIEMPO REAL ===============
+const MAG_SO2 = '1';
+const MAG_CO = '6';
+const MAG_NO = '7';
+const MAG_NO2 = '8';
+const MAG_PM25 = '9';
+const MAG_PM10 = '10';
+const MAG_O3 = '14';
+
+function parseRealtimeAirQualityData(rows: any[]): AirQualityReading[] {
+  const latestByStationMag = new Map<string, { hour: number; value: number; ano: number; mes: number; dia: number }>();
+  for (const row of rows) {
+    const estacion = (row['ESTACION'] || row['PUNTO_MUESTREO'] || '').toString().padStart(3, '0');
+    const magnitud = (row['MAGNITUD'] || '').toString();
+    if (!estacion || !magnitud) continue;
+    if (![MAG_SO2, MAG_CO, MAG_NO, MAG_NO2, MAG_PM25, MAG_PM10, MAG_O3].includes(magnitud)) continue;
+    
+    const ano = Number(row['ANO']);
+    const mes = Number(row['MES']);
+    const dia = Number(row['DIA']);
+    if (!ano || !mes || !dia) continue;
+    
+    let lastValid: { hour: number; value: number } | null = null;
+    for (let h = 1; h <= 24; h++) {
+      const hh = String(h).padStart(2, '0');
+      const v = row[`V${hh}`];
+      const val = safeNum(row[`H${hh}`]);
+      if (v === 'V' && val !== null) lastValid = { hour: h, value: val };
+    }
+    if (!lastValid) continue;
+    
+    const key = `${estacion}_${magnitud}`;
+    const prev = latestByStationMag.get(key);
+    const newer = !prev || ano > prev.ano ||
+      (ano === prev.ano && mes > prev.mes) ||
+      (ano === prev.ano && mes === prev.mes && dia > prev.dia) ||
+      (ano === prev.ano && mes === prev.mes && dia === prev.dia && lastValid.hour > prev.hour);
+    if (newer) latestByStationMag.set(key, { hour: lastValid.hour, value: lastValid.value, ano, mes, dia });
+  }
+  
+  const byStation = new Map<string, AirQualityReading>();
+  for (const [key, info] of latestByStationMag.entries()) {
+    const [stationIdBase, mag] = key.split('_');
+    const stationId = stationIdBase.length === 3 ? `28079${stationIdBase}` : stationIdBase;
+    const ts = new Date(Date.UTC(info.ano, info.mes - 1, info.dia, info.hour - 1, 0, 0)).toISOString();
+    let r = byStation.get(stationId);
+    if (!r) {
+      r = { stationId, measuredAt: ts, so2: null, co: null, no: null, no2: null, pm25: null, pm10: null, o3: null };
+      byStation.set(stationId, r);
+    }
+    if (mag === MAG_SO2) r.so2 = info.value;
+    else if (mag === MAG_CO) r.co = info.value;
+    else if (mag === MAG_NO) r.no = info.value;
+    else if (mag === MAG_NO2) r.no2 = info.value;
+    else if (mag === MAG_PM25) r.pm25 = info.value;
+    else if (mag === MAG_PM10) r.pm10 = info.value;
+    else if (mag === MAG_O3) r.o3 = info.value;
+    
+    if (ts > r.measuredAt) r.measuredAt = ts;
+  }
+  return [...byStation.values()];
+}
+
+async function loadAirQualityReadings(): Promise<AirQualityReading[]> {
+  const candidateUrls = [URLS.airQualityRealtimeJson, URLS.airQualityRealtimeApi];
+  for (const url of candidateUrls) {
+    try {
+      const data = await fetchJson(url);
+      const rows = data?.records || data?.data || data;
+      if (Array.isArray(rows) && rows.length > 0) {
+        const readings = parseRealtimeAirQualityData(rows);
+        if (readings.length > 0) {
+          console.log(`[madridData] air quality live from datos.madrid.es (${readings.length} stations)`);
+          markFreshness('airQuality', 'live');
+          return readings;
+        }
+      }
+    } catch (_) { /* probar siguiente */ }
+  }
+  
+  console.warn('[madridData] air quality readings unavailable');
+  markFreshness('airQuality', 'fallback');
+  return [];
+}
+
 // =============== FUENTES DE AGUA (DS-04, DS-05) ===============
 function parseFountainsJson(json: any, type: 'drink' | 'pet'): Fountain[] {
   // Estructura típica CKAN del Ayto: { "@graph": [ { id, title, location: { latitude, longitude }, ... } ] }
   const graph: any[] = json?.['@graph'] || json?.graph || (Array.isArray(json) ? json : []);
   const out: Fountain[] = [];
   for (const item of graph) {
-    const lat = safeNum(item?.location?.latitude ?? item?.latitude ?? item?.lat);
-    const lng = safeNum(item?.location?.longitude ?? item?.longitude ?? item?.lng);
+    const lat = safeNum(item?.location?.latitude ?? item?.latitude ?? item?.lat ?? item?.LATITUD);
+    const lng = safeNum(item?.location?.longitude ?? item?.longitude ?? item?.lng ?? item?.LONGITUD);
     if (lat === null || lng === null) continue;
-    const statusRaw = String(item?.status || item?.estado || item?.['estado-de-la-fuente'] || '').toUpperCase();
+    const statusRaw = String(item?.status || item?.estado || item?.['estado-de-la-fuente'] || item?.ESTADO || '').toUpperCase();
     let status: Fountain['status'] = 'DESCONOCIDO';
     if (/EN.SERVICIO|OPERATI|ACTIV/.test(statusRaw)) status = 'EN_SERVICIO';
     else if (/AVER/i.test(statusRaw)) status = 'AVERIA';
     else if (/FUERA/i.test(statusRaw)) status = 'FUERA_SERVICIO';
     else if (statusRaw === '') status = 'EN_SERVICIO';
     out.push({
-      id: String(item?.id || item?.identificador || `${lat},${lng}`),
-      name: item?.title || item?.nombre,
-      district: item?.address?.district || item?.distrito,
+      id: String(item?.id || item?.ID || item?.identificador || `${lat},${lng}`),
+      name: item?.title || item?.nombre || item?.NOM_VIA,
+      district: item?.address?.district || item?.distrito || item?.DISTRITO,
       lat,
       lng,
       status,
@@ -309,24 +419,37 @@ function parseFountainsJson(json: any, type: 'drink' | 'pet'): Fountain[] {
 async function loadFountains(): Promise<Fountain[]> {
   const out: Fountain[] = [];
   try {
-    const drink = await fetchJson<any>(URLS.drinkFountains);
-    out.push(...parseFountainsJson(drink, 'drink'));
+    const drinkText = await readLocalFile(LOCAL_FILES.drinkFountains);
+    if (drinkText) {
+      const drink = JSON.parse(drinkText);
+      const parsedDrink = parseFountainsJson(drink, 'drink');
+      out.push(...parsedDrink);
+      console.log(`[madridData] Loaded ${parsedDrink.length} drink fountains from local file`);
+    } else {
+      console.error(`[madridData] Drink fountains local file not found: ${LOCAL_FILES.drinkFountains}`);
+    }
   } catch (err) {
-    console.warn('[madridData] drink fountains fallback:', (err as Error).message);
-    out.push(...fallbackFountains);
+    console.error('[madridData] Drink fountains parse error:', (err as Error).message);
   }
+
   try {
-    const pet = await fetchJson<any>(URLS.petFountains);
-    out.push(...parseFountainsJson(pet, 'pet'));
+    const petText = await readLocalFile(LOCAL_FILES.petFountains);
+    if (petText) {
+      const pet = JSON.parse(petText);
+      const parsedPet = parseFountainsJson(pet, 'pet');
+      out.push(...parsedPet);
+      console.log(`[madridData] Loaded ${parsedPet.length} pet fountains from local file`);
+    } else {
+      console.error(`[madridData] Pet fountains local file not found: ${LOCAL_FILES.petFountains}`);
+    }
   } catch (err) {
-    console.warn('[madridData] pet fountains fallback:', (err as Error).message);
-    out.push(...fallbackPetFountains);
+    console.error('[madridData] Pet fountains parse error:', (err as Error).message);
   }
-  if (out.length === 0) {
-    out.push(...fallbackFountains, ...fallbackPetFountains);
-    markFreshness('fountains', 'fallback');
-  } else {
+
+  if (out.length > 0) {
     markFreshness('fountains', 'live');
+  } else {
+    markFreshness('fountains', 'fallback');
   }
   return out;
 }
@@ -334,7 +457,10 @@ async function loadFountains(): Promise<Fountain[]> {
 // =============== ZONAS VERDES (DS-06) ===============
 async function loadGreenSpaces(): Promise<GreenSpace[]> {
   try {
-    const text = await fetchText(URLS.greenSpaces);
+    const text = await readLocalFile(LOCAL_FILES.greenSpaces);
+    if (!text) {
+      throw new Error(`Local green spaces file not found: ${LOCAL_FILES.greenSpaces}`);
+    }
     const parsed = Papa.parse<Record<string, string>>(text, {
       header: true,
       delimiter: ';',
@@ -362,9 +488,10 @@ async function loadGreenSpaces(): Promise<GreenSpace[]> {
     }
     if (out.length === 0) throw new Error('No green spaces parsed');
     markFreshness('greenSpaces', 'live');
+    console.log(`[madridData] Loaded ${out.length} green spaces from local file`);
     return out;
   } catch (err) {
-    console.warn('[madridData] green spaces fallback:', (err as Error).message);
+    console.error('[madridData] Failed to load local green spaces:', (err as Error).message);
     markFreshness('greenSpaces', 'fallback');
     return fallbackGreenSpaces;
   }
@@ -401,6 +528,7 @@ async function loadAemetAlerts(): Promise<AemetAlert[]> {
 export async function refreshWeather() {
   if (cache.stations.length === 0) cache.stations = await loadStations();
   cache.readings = await loadWeatherReadings(cache.stations);
+  cache.airQuality = await loadAirQualityReadings();
 }
 export async function refreshFountains() {
   cache.fountains = await loadFountains();
@@ -422,12 +550,18 @@ export function getTreeIndexStats() { return { treeCount: getTreeCount() }; }
 
 export function getStations() { return cache.stations; }
 export function getReadings() { return cache.readings; }
+export function getAirQualityReadings() { return cache.airQuality; }
 export function getFountains() { return cache.fountains; }
 export function getGreenSpaces() { return cache.greenSpaces; }
 export function getAlerts() { return cache.alerts; }
 export function getFreshness() { return cache.freshness; }
 
-export function joinedStationReadings(): Array<WeatherStation & { reading?: WeatherReading }> {
-  const map = new Map(cache.readings.map((r) => [r.stationId, r]));
-  return cache.stations.map((s) => ({ ...s, reading: map.get(s.id) }));
+export function joinedStationReadings(): Array<WeatherStation & { reading?: WeatherReading, airQuality?: AirQualityReading }> {
+  const readMap = new Map(cache.readings.map((r) => [r.stationId, r]));
+  const airMap = new Map(cache.airQuality.map((r) => [r.stationId, r]));
+  return cache.stations.map((s) => ({ 
+    ...s, 
+    reading: readMap.get(s.id),
+    airQuality: airMap.get(s.id)
+  }));
 }

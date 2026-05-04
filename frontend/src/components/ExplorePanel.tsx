@@ -25,6 +25,7 @@ export function ExplorePanel() {
   const showDrink   = useStore((s) => s.showDrinkFountains);
   const showPet     = useStore((s) => s.showPetFountains);
   const showGreen   = useStore((s) => s.showGreenSpaces);
+  const showTree    = useStore((s) => s.showTreeShade);
   const toggleLayer = useStore((s) => s.toggleLayer);
 
   const monthIdx = new Date().getMonth();
@@ -120,6 +121,9 @@ export function ExplorePanel() {
         </button>
         <button className={`chip ${showGreen ? 'active' : ''}`} onClick={() => toggleLayer('green')}>
           <Trees size={13} strokeWidth={2} /> {t.greenSpaces}
+        </button>
+        <button className={`chip ${showTree ? 'active' : ''}`} onClick={() => toggleLayer('tree')}>
+          <Trees size={13} strokeWidth={2} /> {t.treeShade}
         </button>
       </div>
 

@@ -12,6 +12,7 @@ export interface ThermalPoint {
   riskLevel: RiskLevel;
   riskColor: string;
   contributingStations: number;
+  aqi?: number;
 }
 
 const RISK_COLORS: Record<RiskLevel, string> = {
@@ -111,19 +112,66 @@ export function parkCoolingBonus(lat: number, lng: number): number {
 export function thermalAtPoint(lat: number, lng: number): ThermalPoint {
   const { temp, hum, wind, contributing } = idwInterpolate(lat, lng);
   const tAdj = temp - parkCoolingBonus(lat, lng);
-  const ict = computeIct(tAdj, hum, wind);
+  const aqi = getAqiAtPoint(lat, lng);
+  const finalTemp = tAdj + (aqi > 3 ? 1 : 0);
+  const ict = computeIct(finalTemp, hum, wind);
   const risk = classifyRisk(ict);
   return {
     lat,
     lng,
-    temperatureC: round1(tAdj),
+    temperatureC: round1(finalTemp),
     humidityPct: round1(hum),
     windSpeedMs: round1(wind),
     ict: round1(ict),
     riskLevel: risk,
     riskColor: RISK_COLORS[risk],
     contributingStations: contributing,
+    aqi: aqi,
   };
+}
+
+export function computeAqi(reading: any): number {
+  let aqi = 1;
+  const no2 = reading.no2 ?? 0;
+  if (no2 > 230) aqi = Math.max(aqi, 5);
+  else if (no2 > 120) aqi = Math.max(aqi, 4);
+  else if (no2 > 90) aqi = Math.max(aqi, 3);
+  else if (no2 > 40) aqi = Math.max(aqi, 2);
+
+  const pm10 = reading.pm10 ?? 0;
+  if (pm10 > 100) aqi = Math.max(aqi, 5);
+  else if (pm10 > 50) aqi = Math.max(aqi, 4);
+  else if (pm10 > 40) aqi = Math.max(aqi, 3);
+  else if (pm10 > 20) aqi = Math.max(aqi, 2);
+
+  const pm25 = reading.pm25 ?? 0;
+  if (pm25 > 50) aqi = Math.max(aqi, 5);
+  else if (pm25 > 25) aqi = Math.max(aqi, 4);
+  else if (pm25 > 20) aqi = Math.max(aqi, 3);
+  else if (pm25 > 10) aqi = Math.max(aqi, 2);
+
+  const o3 = reading.o3 ?? 0;
+  if (o3 > 240) aqi = Math.max(aqi, 5);
+  else if (o3 > 130) aqi = Math.max(aqi, 4);
+  else if (o3 > 100) aqi = Math.max(aqi, 3);
+  else if (o3 > 50) aqi = Math.max(aqi, 2);
+
+  return aqi;
+}
+
+export function getAqiAtPoint(lat: number, lng: number): number {
+  const stations = joinedStationReadings().filter((s) => s.airQuality != null);
+  if (stations.length === 0) return 1;
+  let minD = Infinity;
+  let nearest = stations[0];
+  for (const s of stations) {
+    const d = haversineM({ lat, lng }, { lat: s.lat, lng: s.lng });
+    if (d < minD) {
+      minD = d;
+      nearest = s;
+    }
+  }
+  return computeAqi(nearest.airQuality!);
 }
 
 function round1(x: number) {

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   MapPin, Navigation, Target, User, PersonStanding, PawPrint, Accessibility,
   Leaf, Thermometer, Droplets, Trees, TriangleAlert, Zap, Route, Compass, Footprints,
-  Clock, ExternalLink, ArrowUpDown, Plus, X,
+  Clock, ExternalLink, ArrowUpDown, Plus, X, Wind,
 } from 'lucide-react';
 import type { LucideProps } from 'lucide-react';
 import { useStore } from '../store/appStore';
@@ -322,6 +322,10 @@ export function BottomSheet() {
                   <Trees size={12} strokeWidth={2} />
                   {t.shade} <strong>{Math.round(route.fresh.shadeScore * 100)}%</strong>
                 </span>
+                <span className="stat" title="Índice de Calidad del Aire (1=Mejor, 5=Peor)">
+                  <Wind size={12} strokeWidth={2} />
+                  ICA <strong>{route.fresh.avgAqi || '—'}</strong>
+                </span>
                 <span className="stat">
                   <Droplets size={12} strokeWidth={2} />
                   <strong>{route.fresh.fountainCount}</strong> {t.fountainsLabel}
@@ -364,6 +368,10 @@ export function BottomSheet() {
                 <span className="stat">
                   <Trees size={12} strokeWidth={2} />
                   {t.shade} <strong>{Math.round(route.standard.shadeScore * 100)}%</strong>
+                </span>
+                <span className="stat" title="Índice de Calidad del Aire (1=Mejor, 5=Peor)">
+                  <Wind size={12} strokeWidth={2} />
+                  ICA <strong>{route.standard.avgAqi || '—'}</strong>
                 </span>
                 <span className="stat">
                   <Droplets size={12} strokeWidth={2} />
@@ -415,11 +423,17 @@ export function BottomSheet() {
         <>
           <div className="section-divider" />
           <p className="sheet-section-title">{t.selectedPoint}</p>
-          <div className="thermal-card">
-            <div className="thermal-dot" style={{ background: RISK_COLOR[pointThermal.riskLevel] }} />
-            <div>
-              <div className="label">{t.riskLevels[pointThermal.riskLevel as keyof typeof t.riskLevels]}</div>
-              <div className="value">{pointThermal.temperatureC}°C · ICT {pointThermal.ict}</div>
+          <div className="thermal-card" style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div className="thermal-dot" style={{ background: RISK_COLOR[pointThermal.riskLevel] || '#ccc', marginRight: '8px' }} />
+              <div className="label" style={{ margin: 0, fontWeight: 600, color: '#111827' }}>
+                {pointThermal.address || "Punto seleccionado"}
+              </div>
+            </div>
+            <div style={{ paddingLeft: '16px', fontSize: '13px', lineHeight: '1.4', color: '#4B5563', width: '100%' }}>
+              <div>Temp: {pointThermal.temperatureC}°C · Humedad: {pointThermal.humidityPct !== undefined ? `${pointThermal.humidityPct}%` : '—'}</div>
+              <div>ICT: {pointThermal.ict !== undefined ? pointThermal.ict : '—'} · Riesgo: {pointThermal.riskLevel ? t.riskLevels[pointThermal.riskLevel as keyof typeof t.riskLevels] || pointThermal.riskLevel : '—'}</div>
+              <div>ICA (Calidad Aire): <strong>{pointThermal.aqi !== undefined ? pointThermal.aqi : '—'}</strong> (1=Mejor, 5=Peor)</div>
             </div>
           </div>
         </>

@@ -14,16 +14,16 @@ export interface ProfileWeights {
 }
 
 export const PROFILE_WEIGHTS: Record<UserProfile, ProfileWeights> = {
-  general: { shadow_bonus: 0.3, fountain_bonus: 0.3, temp_penalty: 0.2, slope_penalty: 0.1, distance_weight: 0.6 },
-  elderly: { shadow_bonus: 0.5, fountain_bonus: 0.3, temp_penalty: 0.5, slope_penalty: 0.4, distance_weight: 0.2 },
-  pet:     { shadow_bonus: 0.4, fountain_bonus: 0.4, temp_penalty: 0.3, slope_penalty: 0.1, distance_weight: 0.3 },
-  pmr:     { shadow_bonus: 0.3, fountain_bonus: 0.2, temp_penalty: 0.3, slope_penalty: 0.8, distance_weight: 0.2 },
+  general: { shadow_bonus: 0.5, fountain_bonus: 0.6, temp_penalty: 0.3, slope_penalty: 0.1, distance_weight: 0.4 },
+  elderly: { shadow_bonus: 0.6, fountain_bonus: 0.5, temp_penalty: 0.5, slope_penalty: 0.4, distance_weight: 0.2 },
+  pet:     { shadow_bonus: 0.5, fountain_bonus: 0.7, temp_penalty: 0.4, slope_penalty: 0.1, distance_weight: 0.3 },
+  pmr:     { shadow_bonus: 0.4, fountain_bonus: 0.4, temp_penalty: 0.4, slope_penalty: 0.8, distance_weight: 0.2 },
 };
 
-/** Máximo desvío temporal aceptable para la ruta fresca respecto a la estándar (15 %). */
-const MAX_DETOUR_FACTOR = 1.15;
+/** Máximo desvío temporal aceptable para la ruta fresca respecto a la estándar (30 %). */
+const MAX_DETOUR_FACTOR = 1.30;
 /** Radio en metros para buscar fuentes candidatas a waypoint cerca de la ruta. */
-const FOUNTAIN_SEARCH_BUFFER_M = 250;
+const FOUNTAIN_SEARCH_BUFFER_M = 500;
 /** Radio en metros para considerar que una fuente ya está cubierta por la ruta. */
 const FOUNTAIN_ON_ROUTE_M = 100;
 
@@ -38,6 +38,7 @@ export interface ScoredRoute extends RouteGeometry {
   fountainCount: number;     // fuentes operativas a < 100 m
   parkOverlapPct: number;    // % de la ruta que cae dentro de zonas verdes
   avgTempC: number;          // temperatura media a lo largo de la ruta
+  avgAqi: number;            // Índice de calidad del aire medio
   costScore: number;         // coste compuesto (menor = mejor para el perfil)
   label?: 'standard' | 'fresh';
 }
@@ -149,14 +150,20 @@ function pointInGreenSpace(p: { lat: number; lng: number }): boolean {
   return false;
 }
 
-function nearestFountainM(p: { lat: number; lng: number }, type: 'drink' | 'pet' | 'any'): number {
-  const fts = getFountains().filter((f) => f.status === 'EN_SERVICIO' && (type === 'any' || f.type === type));
-  let min = Infinity;
+function getFountainScore(p: { lat: number; lng: number }, profile: UserProfile): number {
+  const fts = getFountains().filter((f) => f.status === 'EN_SERVICIO');
+  let score = 0;
   for (const f of fts) {
     const d = haversineM(p, { lat: f.lat, lng: f.lng });
-    if (d < min) min = d;
+    if (d < 100) {
+      if (profile === 'pet') {
+        score += f.type === 'pet' ? 2 : 1;
+      } else {
+        if (f.type === 'drink') score += 1;
+      }
+    }
   }
-  return min;
+  return score;
 }
 
 export function scoreRoute(geom: RouteGeometry, profile: UserProfile): ScoredRoute {
@@ -165,30 +172,37 @@ export function scoreRoute(geom: RouteGeometry, profile: UserProfile): ScoredRou
   let fountainHits = 0;
   let parkHits = 0;
   let tempSum = 0;
-  const fountainType = profile === 'pet' ? 'any' : 'drink';
+  let aqiSum = 0;
+  
   for (const p of samples) {
     const inPark = pointInGreenSpace(p);
     if (inPark) parkHits++;
     // Shade: real tree canopy (DS-03) with park fallback if index not yet loaded
     if (isShaded(p.lat, p.lng) || inPark) shadeHits++;
-    const fd = nearestFountainM(p, fountainType);
-    if (fd < 100) fountainHits++;
-    tempSum += thermalAtPoint(p.lat, p.lng).temperatureC;
+    
+    fountainHits += getFountainScore(p, profile);
+    const thermal = thermalAtPoint(p.lat, p.lng);
+    tempSum += thermal.temperatureC;
+    aqiSum += thermal.aqi || 1;
   }
   const n = Math.max(1, samples.length);
   const shadeScore = shadeHits / n;
   const parkOverlapPct = (parkHits / n) * 100;
   const avgTempC = tempSum / n;
+  const avgAqi = aqiSum / n;
 
   const w = PROFILE_WEIGHTS[profile];
   // Coste compuesto: menor es mejor.
   const distanceFactor = geom.distanceM / 1000; // km
   const tempExcess = Math.max(0, avgTempC - 28); // por encima de 28°C empieza a penalizar
+  const aqiPenalty = Math.max(0, avgAqi - 2) * 0.5; // Penaliza si ICA medio > 2 (Regular o peor)
+  
   const costScore =
     distanceFactor * w.distance_weight +
     tempExcess * w.temp_penalty -
     shadeScore * 5 * w.shadow_bonus -
-    Math.min(fountainHits, 5) * w.fountain_bonus;
+    Math.min(fountainHits, 15) * w.fountain_bonus +
+    aqiPenalty;
 
   return {
     ...geom,
@@ -196,6 +210,7 @@ export function scoreRoute(geom: RouteGeometry, profile: UserProfile): ScoredRou
     fountainCount: fountainHits,
     parkOverlapPct: round1(parkOverlapPct),
     avgTempC: round1(avgTempC),
+    avgAqi: round2(avgAqi),
     costScore: round2(costScore),
   };
 }
@@ -246,8 +261,18 @@ function findFountainWaypoints(
     }
   }
 
-  // Ordenar por cercanía al eje de la ruta (las más cercanas = desvío menor).
-  candidates.sort((a, b) => a.minDistToRoute - b.minDistToRoute);
+  // Ordenar: si es perfil mascota, priorizar fuentes de mascota ('pet') incluso si están un poco más lejos.
+  // Luego, ordenar por cercanía al eje de la ruta (las más cercanas = desvío menor).
+  candidates.sort((a, b) => {
+    if (profile === 'pet') {
+      const aIsPet = a.fountain.type === 'pet';
+      const bIsPet = b.fountain.type === 'pet';
+      if (aIsPet && !bIsPet) return -1;
+      if (!aIsPet && bIsPet) return 1;
+    }
+    return a.minDistToRoute - b.minDistToRoute;
+  });
+
   return candidates.slice(0, maxResults);
 }
 
@@ -261,8 +286,8 @@ export async function planFreshRoute(
   const geoms = await callOrs(origin, destination, profile, waypoints);
   const scored = geoms.map((g) => scoreRoute(g, profile));
 
-  // Estándar = primera devuelta por ORS (la más rápida).
-  const standard: ScoredRoute = { ...scored[0], label: 'standard' };
+  // Estándar = la de menor duración de las devueltas por ORS.
+  let standard: ScoredRoute = { ...scored.reduce((best, cur) => cur.durationS < best.durationS ? cur : best, scored[0]), label: 'standard' };
 
   // Fresca inicial = la de menor costScore entre las alternativas de ORS.
   let fresh: ScoredRoute = scored.reduce(
@@ -289,7 +314,12 @@ export async function planFreshRoute(
 
         const detourScored = scoreRoute(detourGeoms[0], profile);
 
-        // Aceptar solo si el desvío temporal es razonable.
+        // Si por alguna razón el desvío es más rápido que la estándar, actualizamos la estándar.
+        if (detourScored.durationS < standard.durationS) {
+          standard = { ...detourScored, label: 'standard' };
+        }
+
+        // Aceptar solo si el desvío temporal es razonable respecto al (posiblemente nuevo) estándar.
         if (detourScored.durationS <= standard.durationS * MAX_DETOUR_FACTOR) {
           // Compararemos por costScore: el desvío debe ser *mejor* que la mejor alternativa ORS.
           if (detourScored.costScore < fresh.costScore) {

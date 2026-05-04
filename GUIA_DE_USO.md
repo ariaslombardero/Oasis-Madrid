@@ -47,16 +47,15 @@ hablando con el backend.
 
 ---
 
-### Prueba 2 — El mapa térmico se ve
+### Prueba 2 — El mapa térmico y la calidad del aire
 
 - Veo unos **círculos de colores** repartidos por Madrid. (Nota: En días frescos serán todos de color verde, pero en verano variarán a amarillo, naranja, rojo o morado).
-- Pulso uno de los círculos y aparece una etiqueta con la temperatura, humedad y nivel de riesgo térmico de esa estación.
+- Pulso uno de los círculos y aparece una etiqueta con la temperatura, humedad, calidad del aire (ICA) y nivel de riesgo térmico de esa estación.
 
 **Qué demuestra:** que la API está sirviendo los datos meteorológicos
-en tiempo real (DS-01 + DS-02 de datos.madrid.es) y que el cálculo del
-**Índice de Confort Térmico (ICT)** funciona.
+en tiempo real (DS-01 + DS-02 de datos.madrid.es) y el dataset de calidad del aire de forma integrada, permitiendo calcular el **Índice de Confort Térmico (ICT)**.
 
-> Los colores corresponden a:
+> Los colores del riesgo térmico corresponden a:
 > 🟢 confort · 🟡 leve · 🟠 moderado · 🔴 fuerte · 🟣 extremo
 
 ---
@@ -87,10 +86,10 @@ está en uso.
 ### Prueba 5 — Punto de información térmica
 
 - Hago clic en cualquier sitio del mapa **lejos** de los círculos de las estaciones.
-- Aparecerá un cuadro en el mapa indicando el nivel de confort de ese **Punto seleccionado** y la temperatura aproximada interpolada.
+- Aparecerá un cuadro en el mapa indicando el nivel de confort de ese **Punto seleccionado**, la temperatura aproximada interpolada y el índice de calidad del aire (ICA) en esa ubicación.
 
 **Qué demuestra:** que el algoritmo de **interpolación espacial IDW**
-(estimar la temperatura entre estaciones) funciona y enriquece la
+(estimar la temperatura y calidad del aire entre estaciones) funciona y enriquece la
 información con la cercanía a parques.
 
 ---
@@ -177,6 +176,16 @@ universal** (WCAG 2.1) — un punto que valora explícitamente el jurado.
 
 **Qué demuestra:** diseño *mobile-first* — la app está pensada para
 ser útil en la calle, no solo en escritorio.
+
+---
+
+### Prueba 13 — Exportar ruta a navegador GPS
+
+1. Tras calcular una ruta (Prueba 6), desplázate hacia abajo en la información de la ruta.
+2. Pulsa el botón desplegable **"Abrir en..."** en la cabecera de la caja de resultados.
+3. Selecciona **Google Maps**, **Waze** o **Apple Maps**.
+
+**Qué demuestra:** que OasisMadrid se centra en el cálculo diferencial de confort térmico y salud, mientras delega la navegación paso a paso a aplicaciones especializadas, permitiendo un uso continuo en la calle.
 
 ---
 

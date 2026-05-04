@@ -66,3 +66,25 @@ export async function geocodeMadrid(query: string): Promise<{ lat: number; lng: 
   if (!data.length) return null;
   return { lat: Number(data[0].lat), lng: Number(data[0].lon), display: data[0].display_name };
 }
+
+// Geocodificación inversa con Nominatim (OSM)
+export async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
+  const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`;
+  try {
+    const r = await fetch(url, { headers: { 'Accept-Language': 'es' } });
+    if (!r.ok) return null;
+    const data = await r.json();
+    if (data && data.address) {
+      const road = data.address.road || data.address.pedestrian || data.address.path || data.address.footway;
+      const neighbourhood = data.address.neighbourhood || data.address.suburb;
+      if (road && neighbourhood) return `${road}, ${neighbourhood}`;
+      if (road) return road;
+      if (neighbourhood) return neighbourhood;
+      if (data.display_name) return data.display_name.split(',')[0];
+    }
+    return null;
+  } catch (e) {
+    console.error('Error reverse geocoding:', e);
+    return null;
+  }
+}

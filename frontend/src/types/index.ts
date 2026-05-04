@@ -13,6 +13,7 @@ export interface WeatherStation {
   ict: number | null;
   riskLevel: RiskLevel | null;
   measuredAt: string | null;
+  aqi?: number;
 }
 
 export interface Fountain {
@@ -43,6 +44,8 @@ export interface ThermalPoint {
   riskLevel: RiskLevel;
   riskColor: string;
   contributingStations: number;
+  address?: string;
+  aqi?: number;
 }
 
 export interface ScoredRoute {
@@ -54,6 +57,7 @@ export interface ScoredRoute {
   parkOverlapPct: number;
   avgTempC: number;
   costScore: number;
+  avgAqi?: number;
   label?: 'standard' | 'fresh';
 }
 

@@ -45,18 +45,19 @@ La aplicación calcula qué rutas a pie ofrecen mayor cobertura de sombra arbór
 
 ## 📌 Características
 
-- 🌡️ **Mapa de confort térmico** — Visualización en tiempo real de la temperatura interpolada y el nivel de riesgo en cualquier punto de Madrid, actualizado cada 20 minutos con datos de las estaciones municipales.
-- 🗺️ **Planificador de rutas frescas** — Comparativa visual entre la ruta más rápida y la más fresca (mayor sombra, más fuentes, menor exposición térmica) con métricas de diferencia en grados, minutos y puntos de hidratación.
+- 🌡️ **Mapa de confort térmico y Calidad del Aire** — Visualización en tiempo real de la temperatura interpolada, el índice de calidad del aire (ICA) y el nivel de riesgo en cualquier punto de Madrid.
+- 🗺️ **Planificador de rutas frescas** — Comparativa visual entre la ruta más rápida y la más fresca (mayor sombra, más fuentes, menor exposición térmica).
+- 🧭 **Exportación a navegadores GPS** — Una vez calculada la ruta fresca, envíala directamente a Google Maps, Waze o Apple Maps para disfrutar de navegación paso a paso en tiempo real.
 - 🚶 **Paseo fresco circular** — Generación de rutas circulares por duración (sin destino fijo) que maximizan la sombra y la proximidad a fuentes. Punto de partida configurable por geolocalización o dirección manual.
-- 🧭 **Explorar Madrid** — Modo libre para explorar la ciudad activando/desactivando capas de zonas verdes, fuentes (beber y mascotas) y visualizando el ranking de barrios más frescos o calurosos en tiempo real.
-- 👤 **4 perfiles de usuario** — Transeúnte general, persona mayor, paseo con mascota y persona con movilidad reducida. Cada perfil ajusta los pesos del algoritmo de enrutamiento.
-- 💧 **Fuentes operativas filtradas** — Solo se muestran fuentes con estado EN SERVICIO (potables y para mascotas), sincronizadas diariamente con el portal municipal.
-- 🌳 **Índice de sombra arbórea** — Rejilla espacial construida a partir del inventario municipal de arbolado, consultada en tiempo real para cada tramo de la ruta.
+- 🌍 **Explorar Madrid** — Modo libre para explorar la ciudad activando/desactivando capas de zonas verdes, fuentes y visualizando el ranking de barrios más frescos o calurosos en tiempo real.
+- 👤 **4 perfiles de usuario** — Transeúnte general, persona mayor, paseo con mascota y persona con movilidad reducida.
+- 💧 **Fuentes operativas filtradas** — Solo se muestran fuentes con estado EN SERVICIO (potables y para mascotas), sincronizadas diariamente.
+- 🌳 **Índice de sombra arbórea** — Rejilla espacial construida a partir del inventario municipal de arbolado, consultada en tiempo real.
 - 🔴 **Alertas térmicas** — Banners automáticos por umbral de temperatura local para advertir sobre condiciones de calor extremo.
 - 📊 **Contexto climático histórico** — Cada lectura muestra la desviación respecto a las normales climatológicas históricas de la ciudad.
-- ♿ **Accesibilidad WCAG 2.1 AA** — Diseñada siguiendo las pautas WCAG 2.1 nivel AA: modo de texto grande, modo de alto contraste, navegación por teclado.
-- 🎨 **UI/UX Refinada** — Visualización en paralelo de rutas coincidentes en el mapa, fondo con luminosidad adaptada y claridad en los mensajes comparativos de confort térmico.
-- 🌍 **Bilingüe** — Interfaz completa en castellano e inglés con cambio instantáneo.
+- ♿ **Accesibilidad WCAG 2.1 AA** — Diseñada siguiendo las pautas WCAG 2.1 nivel AA: modo de texto grande, alto contraste, navegación por teclado.
+- 🎨 **UI/UX Refinada** — Visualización en paralelo de rutas coincidentes en el mapa y diseño premium con animaciones dinámicas.
+- 🌐 **Bilingüe** — Interfaz completa en castellano e inglés con cambio instantáneo.
 
 ---
 
@@ -119,7 +120,7 @@ oasismadrid/
 
 ## 🌐 Conjuntos de datos reutilizados
 
-### Datos del portal datos.madrid.es (6 conjuntos)
+### Datos del portal datos.madrid.es (7 conjuntos)
 
 | # | Dataset | Frecuencia | Función |
 |---|---------|-----------|--------|
@@ -129,6 +130,7 @@ oasismadrid/
 | DS-04 | Fuentes de agua para beber | Diaria | Puntos de hidratación (perfil general) |
 | DS-05 | Fuentes de agua para mascotas | Diaria | Hidratación dual (perfil mascota) |
 | DS-06 | Inventario de zonas verdes | Anual | Capa de parques + proxy de sombra |
+| DS-07 | Calidad del aire en tiempo real | 1 hora | Índice de Calidad del Aire (ICA) |
 
 ### Fuentes externas
 
@@ -200,9 +202,9 @@ POST /api/v1/route/fresh         # Cálculo de ruta fresca
 
 ---
 
-## 🤖 Desarrollo asistido por IA (Vibe Coding)
+## 🤖 Desarrollo Asistido por Inteligencia Artificial Avanzada (AI-Driven Development / Agentic AI)
 
-Este proyecto ha sido desarrollado íntegramente mediante **AI-Driven Development**, utilizando modelos avanzados de lenguaje para la arquitectura, la lógica algorítmica y el diseño de interfaz. El flujo de trabajo ha incluido:
+Este proyecto ha sido desarrollado aplicando metodologías de **Inteligencia Artificial Avanzada**, cumpliendo de forma directa con los criterios de innovación tecnológica del concurso. Utilizando modelos avanzados de lenguaje y arquitecturas de agentes autónomos (Agentic AI), el flujo de trabajo ha incluido:
 
 1. **Diseño de arquitectura React + Node.js** con separación estricta frontend/backend y API REST documentada.
 2. **Algoritmo de coste compuesto** con ponderación termodinámica de rutas, incluyendo la lógica de inyección de waypoints por fuente y la función de scoring por perfil de usuario.
@@ -238,6 +240,6 @@ Este proyecto está bajo la Licencia **MIT**. Consulta el archivo [LICENSE](./LI
 **Jose Antonio Arias Lombardero**
 *Experto en Inteligencia Artificial aplicada al sector público, innovación, contratación y fondos europeos.*
 
-Esta aplicación forma parte de un portfolio de soluciones tecnológicas conceptualizadas, desarrolladas y desplegadas en entornos cloud para su aplicación en el sector público. Mi objetivo es demostrar cómo el uso estratégico de modelos avanzados de IA (Vibe Coding) puede escalar radicalmente la digitalización, la operatividad y la alfabetización tecnológica de la Administración.
+Esta aplicación forma parte de un portfolio de soluciones tecnológicas conceptualizadas, desarrolladas y desplegadas en entornos cloud para su aplicación en el sector público. Mi objetivo es demostrar cómo el uso estratégico de modelos avanzados de IA (Desarrollo Asistido por Inteligencia Artificial Avanzada - Agentic AI) puede escalar radicalmente la digitalización, la operatividad y la alfabetización tecnológica de la Administración.
 
 🔗 [Consulta mi portfolio completo de aplicaciones y trayectoria profesional](https://ariaslombardero.es/)

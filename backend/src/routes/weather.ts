@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import axios from 'axios';
 import { joinedStationReadings, getFreshness } from '../services/madridData.js';
-import { computeIct, classifyRisk } from '../services/thermalIndex.js';
+import { computeIct, classifyRisk, computeAqi } from '../services/thermalIndex.js';
 
 export const weatherRouter = Router();
 
@@ -107,6 +107,8 @@ weatherRouter.get('/current', (_req, res) => {
       measuredAt: r?.measuredAt ?? null,
       ict,
       riskLevel: risk,
+      airQuality: s.airQuality ?? null,
+      aqi: s.airQuality ? computeAqi(s.airQuality) : undefined,
     };
   });
   res.json({ stations: data, freshness: getFreshness() });

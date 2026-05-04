@@ -248,9 +248,10 @@ button:focus-visible,
   background: var(--color-card);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   box-shadow: 0 -4px 30px rgba(0,0,0,0.12);
-  padding: 0 16px 20px;
+  padding: 0 16px max(40px, calc(env(safe-area-inset-bottom) + 20px));
   max-height: 62vh;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   transition: background var(--ease);
 }
 
